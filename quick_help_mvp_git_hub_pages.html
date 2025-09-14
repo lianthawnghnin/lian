@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QuickHelp MVP</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121933; --muted:#8fa3c7; --text:#f4f7ff; --accent:#7aa2ff; --ok:#54d686; --warn:#ffd166; --danger:#ff6b6b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;background:linear-gradient(180deg,#0b1020,#0f1630 35%,#0b1020);color:var(--text)}
+    .container{max-width:980px;margin:0 auto;padding:24px}
+    .appbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .logo{font-weight:800;letter-spacing:.2px}
+    .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 10px;border-radius:999px;background:#182246;color:#cfe0ff;font-size:12px}
+    .card{background:var(--card);border:1px solid #1b2447;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    .panel{padding:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1 1 240px}
+    input,select,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1px solid #28325a;background:#0f1430;color:var(--text)}
+    textarea{min-height:96px}
+    button{cursor:pointer;border:0;border-radius:12px;padding:10px 14px;background:var(--accent);color:#08122b;font-weight:700}
+    button.ghost{background:#182246;color:#cfe0ff}
+    button.warn{background:var(--warn)}
+    button.ok{background:var(--ok)}
+    button.danger{background:var(--danger)}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{padding:14px;border-radius:14px;border:1px solid #243064;background:#0f1536}
+    .muted{color:var(--muted);font-size:12px}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#19234a;color:#cfe0ff;font-size:12px}
+    .spacer{height:10px}
+    .center{display:flex;align-items:center;justify-content:center}
+    .right{margin-left:auto}
+    .tabs{display:flex;gap:8px;margin:8px 0}
+    .tab{padding:8px 12px;border-radius:10px;background:#162045;color:#cfe0ff;cursor:pointer}
+    .tab.active{background:var(--accent);color:#08122b;font-weight:800}
+    .grid{display:grid;grid-template-columns:1.4fr .6fr;gap:16px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+    .chat{height:240px;overflow:auto;border:1px solid #243064;border-radius:12px;padding:10px;background:#0c1333}
+    .msg{margin:6px 0;padding:8px 10px;border-radius:10px;max-width:80%}
+    .me{background:#14235a;margin-left:auto}
+    .them{background:#1a1f3f}
+    .footer{margin-top:18px;font-size:12px;color:#9db2d9;opacity:.8}
+    a{color:#9dc1ff}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="appbar">
+      <div class="logo">⚡ QuickHelp <span class="pill"><span id="creditPill">0</span> min</span></div>
+      <div>
+        <span class="muted" id="hello"></span>
+        <button class="ghost" id="btnLogout" onclick="logout()" style="display:none">Log out</button>
+      </div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="screen-login" class="card" style="display:none">
+      <div class="panel">
+        <h2>Welcome 👋</h2>
+        <p class="muted">This MVP is 100% front‑end (no server). Sign in with only a name + school. You can share the link and everyone will see the same public feed on this device. Use different browsers or a private window to simulate multiple users.</p>
+        <div class="row">
+          <div class="col"><input id="loginName" placeholder="Your name (e.g., Alex Kim)"/></div>
+          <div class="col"><input id="loginSchool" placeholder="School (e.g., Tufts)"/></div>
+          <div class="col" style="max-width:150px"><button onclick="login()">Enter</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP -->
+    <div id="screen-app" style="display:none">
+      <div class="grid">
+        <div>
+          <div class="card panel">
+            <div class="tabs">
+              <div id="tab-feed" class="tab active" onclick="switchTab('feed')">Feed</div>
+              <div id="tab-mine" class="tab" onclick="switchTab('mine')">My Tasks</div>
+              <div id="tab-credits" class="tab" onclick="switchTab('credits')">Credits</div>
+            </div>
+            <div id="view-feed">
+              <div class="row">
+                <div class="col"><input id="q" placeholder="Search tasks (e.g., 'deliver', 'math')" oninput="render()"/></div>
+                <div class="col" style="max-width:160px">
+                  <select id="filter" onchange="render()">
+                    <option value="all">All</option>
+                    <option value="open">Open</option>
+                    <option value="claimed">Claimed</option>
+                    <option value="done">Completed</option>
+                  </select>
+                </div>
+              </div>
+              <div class="spacer"></div>
+              <div class="list" id="feed"></div>
+            </div>
+
+            <div id="view-mine" style="display:none">
+              <h3>Tasks I posted</h3>
+              <div id="myPosted" class="list"></div>
+              <div class="spacer"></div>
+              <h3>Tasks I claimed</h3>
+              <div id="myClaimed" class="list"></div>
+            </div>
+
+            <div id="view-credits" style="display:none">
+              <h3>My credit history</h3>
+              <div id="ledger" class="list"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="card panel">
+            <h3>Create a task</h3>
+            <div class="row">
+              <div class="col"><input id="tTitle" placeholder="E.g., 'Carry groceries to dorm'"/></div>
+              <div class="col" style="max-width:180px"><input id="tMinutes" type="number" min="1" step="1" placeholder="Minutes"/></div>
+            </div>
+            <div class="spacer"></div>
+            <textarea id="tDesc" placeholder="Describe what you need, location, timing, and any constraints."></textarea>
+            <div class="row" style="margin-top:10px">
+              <div class="col" style="max-width:200px">
+                <select id="tType">
+                  <option value="favor">Favor Credits</option>
+                  <option value="tip">Tip (non-cash)</option>
+                </select>
+              </div>
+              <div class="col right" style="max-width:160px"><button onclick="createTask()">Post task</button></div>
+            </div>
+            <p class="muted footer">Policy-friendly: default exchange is <b>minutes-for-minutes</b> (time credits). "Tips" here are just notes like snacks or thanks — not money.</p>
+          </div>
+
+          <div class="card panel" id="chatPanel" style="margin-top:16px; display:none">
+            <div class="row" style="align-items:center">
+              <h3 style="margin:0">Task chat</h3>
+              <span class="badge right" id="chatTaskBadge"></span>
+            </div>
+            <div id="chatBox" class="chat"></div>
+            <div class="row" style="margin-top:10px">
+              <div class="col"><input id="chatInput" placeholder="Type a message... (Enter to send)" onkeydown="if(event.key==='Enter'){sendMsg()}"/></div>
+              <div class="col" style="max-width:120px"><button onclick="sendMsg()">Send</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="footer">Data is stored locally in your browser (localStorage). To simulate multiple users, open a new private window or a different browser.</p>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Simple localStorage helpers ----------
+    const db = {
+      read(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d } catch{ return d } },
+      write(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
+    }
+
+    // data shapes
+    // users: { id, name, school, credits }
+    // tasks: { id, title, desc, minutes, type, by, byName, school, status:'open'|'claimed'|'done', claimer:null|id, claimerName:null, ts }
+    // messages: { [taskId]: [{by, byName, text, ts}] }
+
+    const state = {
+      me: db.read('qh_me', null),
+      users: db.read('qh_users', []),
+      tasks: db.read('qh_tasks', []),
+      messages: db.read('qh_messages', {})
+    }
+
+    const $ = s => document.querySelector(s)
+
+    function save(){ db.write('qh_users', state.users); db.write('qh_tasks', state.tasks); db.write('qh_messages', state.messages); db.write('qh_me', state.me) }
+
+    // ---------- Auth ----------
+    function login(){
+      const name = $('#loginName').value.trim()
+      const school = $('#loginSchool').value.trim() || 'Campus'
+      if(!name){ alert('Enter your name'); return }
+      const id = 'u_'+Math.random().toString(36).slice(2,9)
+      const me = { id, name, school, credits: 30 } // start with 30 minutes
+      state.me = me
+      state.users.push(me)
+      save(); mount()
+    }
+
+    function logout(){
+      state.me = null; save(); mount()
+    }
+
+    // ---------- Tasks ----------
+    function createTask(){
+      const title = $('#tTitle').value.trim();
+      const minutes = parseInt($('#tMinutes').value,10)
+      const desc = $('#tDesc').value.trim()
+      const type = $('#tType').value
+      if(!title || !minutes){ alert('Title and minutes are required'); return }
+      const t = { id: 't_'+Date.now(), title, desc, minutes, type, by: state.me.id, byName: state.me.name, school: state.me.school, status:'open', claimer:null, claimerName:null, ts: Date.now() }
+      state.tasks.unshift(t)
+      $('#tTitle').value = ''; $('#tMinutes').value=''; $('#tDesc').value=''
+      save(); render()
+    }
+
+    function claimTask(id){
+      const t = state.tasks.find(x=>x.id===id)
+      if(!t || t.status!=='open'){ return }
+      if(t.by===state.me.id){ return alert('You cannot claim your own task.') }
+      t.status='claimed'; t.claimer=state.me.id; t.claimerName=state.me.name
+      pushMsg(id, `${state.me.name} claimed the task.`)
+      save(); render(); openChat(id)
+    }
+
+    function unclaimTask(id){
+      const t = state.tasks.find(x=>x.id===id); if(!t) return
+      if(t.claimer!==state.me.id){ return alert('Only the claimer can unclaim.') }
+      t.status='open'; t.claimer=null; t.claimerName=null
+      pushMsg(id, `${state.me.name} unclaimed the task.`)
+      save(); render()
+    }
+
+    function markDone(id){
+      const t = state.tasks.find(x=>x.id===id); if(!t) return
+      if(!(t.by===state.me.id || t.claimer===state.me.id)){ return alert('Only requester or claimer can complete.') }
+      if(t.status==='done'){ return }
+      t.status='done'
+      // credit transfer: requester pays minutes to claimer (if exists)
+      const from = state.users.find(u=>u.id===t.by)
+      const to = state.users.find(u=>u.id===t.claimer)
+      if(to){
+        const m = Math.max(1, t.minutes|0)
+        from.credits = Math.max(0, (from.credits|0) - m)
+        to.credits = (to.credits|0) + m
+        addLedger(from.id, -m, `Paid ${m} min to ${to.name} for '${t.title}'`)
+        addLedger(to.id, +m, `Earned ${m} min for '${t.title}'`)
+      }
+      pushMsg(id, `Task marked complete. Minutes transferred.`)
+      save(); render()
+    }
+
+    // ---------- Ledger ----------
+    function addLedger(uid, delta, note){
+      const key = 'qh_ledger_'+uid
+      const list = db.read(key, [])
+      list.unshift({ts:Date.now(), delta, note})
+      db.write(key, list)
+    }
+
+    function getLedger(uid){
+      return db.read('qh_ledger_'+uid, [])
+    }
+
+    // ---------- Chat ----------
+    function pushMsg(taskId, text){
+      if(!state.messages[taskId]) state.messages[taskId]=[]
+      state.messages[taskId].push({by:state.me.id, byName:state.me.name, text, ts:Date.now()})
+    }
+
+    function openChat(taskId){
+      const t = state.tasks.find(x=>x.id===taskId); if(!t) return
+      $('#chatPanel').style.display='block'
+      $('#chatTaskBadge').textContent = `${t.title} • ${t.minutes} min`
+      $('#chatInput').value=''
+      $('#chatInput').dataset.taskId = taskId
+      renderChat(taskId)
+    }
+
+    function renderChat(taskId){
+      const box = $('#chatBox'); box.innerHTML=''
+      const msgs = (state.messages[taskId]||[])
+      msgs.forEach(m=>{
+        const div = document.createElement('div')
+        div.className='msg '+(m.by===state.me.id?'me':'them')
+        div.textContent = `${m.by===state.me.id?'Me':m.byName}: ${m.text}`
+        box.appendChild(div)
+      })
+      box.scrollTop = box.scrollHeight
+    }
+
+    function sendMsg(){
+      const input = $('#chatInput'); const taskId = input.dataset.taskId
+      const text = input.value.trim(); if(!text) return
+      pushMsg(taskId, text); save(); input.value=''; renderChat(taskId)
+    }
+
+    // ---------- UI ----------
+    function timeAgo(ts){
+      const s=Math.floor((Date.now()-ts)/1000); if(s<60) return s+"s"; const m=Math.floor(s/60); if(m<60) return m+"m"; const h=Math.floor(m/60); if(h<24) return h+"h"; const d=Math.floor(h/24); return d+"d";
+    }
+
+    function switchTab(name){
+      ['feed','mine','credits'].forEach(t=>{
+        $('#tab-'+t).classList.toggle('active', t===name)
+        $('#view-'+t).style.display = (t===name)?'block':'none'
+      })
+    }
+
+    function render(){
+      if(!state.me){ return }
+      $('#hello').textContent = `Hi, ${state.me.name} (${state.me.school})`
+      $('#btnLogout').style.display='inline-flex'
+      $('#creditPill').textContent = state.me.credits|0
+
+      const q = ($('#q').value||'').toLowerCase()
+      const f = $('#filter').value
+
+      const list = state.tasks.filter(t=>{
+        const match = (t.title+" "+t.desc).toLowerCase().includes(q)
+        const ok = f==='all' || t.status===f
+        return match && ok
+      })
+
+      const feed = $('#feed'); feed.innerHTML=''
+      list.forEach(t=> feed.appendChild(taskItem(t)))
+
+      const myPosted = state.tasks.filter(t=>t.by===state.me.id)
+      const myClaimed = state.tasks.filter(t=>t.claimer===state.me.id)
+
+      const posted = $('#myPosted'); posted.innerHTML=''
+      myPosted.forEach(t=> posted.appendChild(taskItem(t)))
+
+      const claimed = $('#myClaimed'); claimed.innerHTML=''
+      myClaimed.forEach(t=> claimed.appendChild(taskItem(t)))
+
+      // ledger
+      const ledger = $('#ledger'); ledger.innerHTML=''
+      getLedger(state.me.id).forEach(row=>{
+        const div = document.createElement('div')
+        div.className='item'
+        const sign = row.delta>0?'+':''
+        div.innerHTML = `<div><b>${sign}${row.delta} min</b> — ${row.note}</div><div class="muted">${new Date(row.ts).toLocaleString()}</div>`
+        ledger.appendChild(div)
+      })
+    }
+
+    function taskItem(t){
+      const div = document.createElement('div'); div.className='item'
+      div.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:center">
+          <div style="flex:1">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <b>${t.title}</b>
+              <span class="badge">${t.minutes} min</span>
+              <span class="badge">${t.type}</span>
+              <span class="muted">by ${t.byName} • ${t.school} • ${timeAgo(t.ts)} ago</span>
+            </div>
+            <div class="muted" style="margin-top:6px">${t.desc||''}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${t.status==='open' && t.by!==state.me.id?`<button class="ok" onclick="claimTask('${t.id}')">Claim</button>`:''}
+            ${t.status==='claimed' && t.claimer===state.me.id?`<button class="warn" onclick="unclaimTask('${t.id}')">Unclaim</button>`:''}
+            ${ (t.by===state.me.id || t.claimer===state.me.id) && t.status!=='done'?`<button class="ok" onclick="markDone('${t.id}')">Complete</button>`:''}
+            <button class="ghost" onclick="openChat('${t.id}')">Chat</button>
+          </div>
+        </div>
+        <div class="muted" style="margin-top:8px">Status: ${t.status}${t.claimerName?` • Claimed by ${t.claimerName}`:''}</div>
+      `
+      return div
+    }
+
+    function mount(){
+      if(state.me){
+        $('#screen-login').style.display='none'
+        $('#screen-app').style.display='block'
+        render()
+      }else{
+        $('#screen-app').style.display='none'
+        $('#screen-login').style.display='block'
+        $('#hello').textContent=''
+        $('#btnLogout').style.display='none'
+      }
+    }
+
+    // seed a couple demo tasks on first load
+    (function seed(){
+      if((state.tasks||[]).length===0){
+        const demoUser = {id:'u_demo', name:'Jess (demo)', school:'Tufts', credits:30}
+        if(!state.users.find(u=>u.id==='u_demo')) state.users.push(demoUser)
+        state.tasks.push(
+          {id:'t_demo1', title:'Pick up printouts at library', desc:'Need them before 5pm, Tisch Library.', minutes:10, type:'favor', by:'u_demo', byName:'Jess (demo)', school:'Tufts', status:'open', claimer:null, claimerName:null, ts:Date.now()-1000*60*40},
+          {id:'t_demo2', title:'Explain econ problem set Q4', desc:'IS-LM confusion. 15 min call.', minutes:15, type:'favor', by:'u_demo', byName:'Jess (demo)', school:'Tufts', status:'open', claimer:null, claimerName:null, ts:Date.now()-1000*60*130}
+        )
+        save()
+      }
+    })()
+
+    mount()
+  </script>
+</body>
+</html>
